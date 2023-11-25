@@ -1,5 +1,25 @@
 #! /bin/bash
 
+function delete_sagemaker_domain_apps () {
+    region=$1
+    
+    apps=$(aws sagemaker list-apps --region $region \
+        --query 'Apps[?Status==`InService`]')
+    
+    echo $apps | jq -c '.[]' | while read app; do
+        domainId=$(echo $app | jq -r '.DomainId')
+        userProfileName=$(echo $app | jq -r '.UserProfileName')
+        appType=$(echo $app | jq -r '.AppType')
+        appName=$(echo $app | jq -r '.AppName')
+        echo "Deleting app: ${domainId}-${userProfileName}-${appType}-${appName}"; 
+        aws sagemaker delete-app --region $region \
+            --domain-id $domainId \
+            --user-profile-name $userProfileName  \
+            --app-type $appType \
+            --app-name $appName
+    done
+}
+
 function delete_sagemaker_model_endpoints () {
     region=$1
     
@@ -30,6 +50,7 @@ function process_region() {
     region=$1
     echo "processing $region"
     delete_sagemaker_model_endpoints $region
+    delete_sagemaker_domain_apps $region
 } 
 
 echo "Begin SageMaker cleanup"
